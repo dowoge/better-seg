@@ -18,6 +18,15 @@ bool g_bTeleported[MAXPLAYERS+1];
 int g_nTeleportedTo[MAXPLAYERS+1];
 UserMsg g_iKeyHintText;
 
+public Plugin myinfo =
+{
+	name = "Better seg",
+	author = "wool (?), source reconstructed by tommy",
+	description = "Freezes players after checkpoint teleports on segmented styles",
+	version = "1.0.0",
+	url = "https://github.com/dowoge/better-seg"
+};
+
 public void OnPluginStart()
 {
 	RegConsoleCmd("sm_seg_freeze", Cmd_Freeze, "Start recording");
