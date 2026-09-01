@@ -8,16 +8,17 @@ A small [bhoptimer](https://github.com/shavitush/bhoptimer) add-on for segmented
 - Blocks checkpoint saves while the player is still frozen after a teleport (`Shavit_OnSavePre`).
 - Appends `Freeze after teleport: ON/OFF` to the checkpoint `KeyHintText` HUD panel.
 - Notifies the player about `!seg_freeze` when they switch to a segmented style.
+- Remembers each player's freeze setting with a clientprefs cookie (`betterseg_freeze`); also toggleable from the `!settings` menu.
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `sm_seg_freeze` | Toggle freezing after teleport for the calling player (default: on). |
+| `sm_seg_freeze` | Toggle freezing after teleport for the calling player (default: on, saved per player). |
 
 ## Requirements
 
-- SourceMod 1.11
+- SourceMod 1.11 with the clientprefs extension
 - [bhoptimer](https://github.com/shavitush/bhoptimer) with `shavit-core` and `shavit-checkpoints` running
 
 ## Building

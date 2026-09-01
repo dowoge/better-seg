@@ -17,6 +17,7 @@ bool g_bFreeze[MAXPLAYERS+1] = {true, ...};
 bool g_bTeleported[MAXPLAYERS+1];
 int g_nTeleportedTo[MAXPLAYERS+1];
 UserMsg g_iKeyHintText;
+Cookie g_hFreezeCookie;
 
 public Plugin myinfo =
 {
@@ -33,6 +34,9 @@ public void OnPluginStart()
 
 	g_iKeyHintText = GetUserMessageId("KeyHintText");
 	HookUserMessage(g_iKeyHintText, KeyText, true);
+
+	g_hFreezeCookie = new Cookie("betterseg_freeze", "Freeze after teleport on segmented styles", CookieAccess_Protected);
+	g_hFreezeCookie.SetPrefabMenu(CookieMenu_OnOff_Int, "Freeze after teleport", OnFreezeCookieMenu);
 }
 
 public void OnAllPluginsLoaded()
@@ -42,6 +46,28 @@ public void OnAllPluginsLoaded()
 public void OnClientConnected(int client)
 {
 	g_bTeleported[client] = false;
+	g_bFreeze[client] = true;
+}
+
+public void OnClientCookiesCached(int client)
+{
+	LoadFreezeCookie(client);
+}
+
+void LoadFreezeCookie(int client)
+{
+	char buf[8];
+	g_hFreezeCookie.Get(client, buf, sizeof(buf));
+
+	g_bFreeze[client] = (buf[0] == '\0') || (StringToInt(buf) != 0);
+}
+
+public void OnFreezeCookieMenu(int client, CookieMenuAction action, any info, char[] buffer, int maxlen)
+{
+	if (action == CookieMenuAction_SelectOption)
+	{
+		LoadFreezeCookie(client);
+	}
 }
 
 bool CanSegment(int client)
@@ -120,6 +146,7 @@ public Action Cmd_Freeze(int client, int args)
 	}
 
 	g_bFreeze[client] = !g_bFreeze[client];
+	g_hFreezeCookie.Set(client, g_bFreeze[client] ? "1" : "0");
 
 	PrintToChat(client, "Freeze after teleport: %s", g_bFreeze[client] ? "ON" : "OFF");
 
