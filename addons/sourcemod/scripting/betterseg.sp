@@ -76,7 +76,7 @@ public void OnFreezeCookieMenu(int client, CookieMenuAction action, any info, ch
 
 bool TimerStarted(int client)
 {
-	return Shavit_GetTimerStatus(client) != Timer_Stopped && !Shavit_InsideZone(client, Zone_Start, -1);
+	return Shavit_GetTimerStatus(client) != Timer_Stopped && !Shavit_InsideZone(client, Zone_Start, Shavit_GetClientTrack(client));
 }
 
 
