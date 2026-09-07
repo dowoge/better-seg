@@ -4,7 +4,7 @@ A small [bhoptimer](https://github.com/shavitush/bhoptimer) add-on. When a playe
 
 ## Features
 
-- Works on every style, but only while the timer is running (`Shavit_GetTimerStatus` is not `Timer_Stopped`).
+- Works on every style, but only once the timer has started: `Shavit_GetTimerStatus` is not `Timer_Stopped` and the player is not inside a start zone (the timer keeps running at zero while in the start zone).
 - Freezes the player in place after `Shavit_TeleportToCheckpoint` until they press a movement key (`vel[0]`/`vel[1]` become non-zero). While frozen, the player is re-teleported to the checkpoint every tick with zero velocity and `MOVETYPE_NONE`, so client prediction matches the server and there are no prediction errors until the player moves.
 - Blocks checkpoint saves while the player is still frozen after a teleport (`Shavit_OnSavePre`).
 - Appends `Freeze after teleport: ON/OFF` to the checkpoint `KeyHintText` HUD panel.
@@ -26,7 +26,7 @@ A small [bhoptimer](https://github.com/shavitush/bhoptimer) add-on. When a playe
 ## Requirements
 
 - SourceMod 1.11 with the clientprefs extension
-- [bhoptimer](https://github.com/shavitush/bhoptimer) with `shavit-core` and `shavit-checkpoints` running
+- [bhoptimer](https://github.com/shavitush/bhoptimer) with `shavit-core`, `shavit-zones` and `shavit-checkpoints` running
 
 ## Building
 

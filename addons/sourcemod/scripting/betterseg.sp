@@ -74,9 +74,9 @@ public void OnFreezeCookieMenu(int client, CookieMenuAction action, any info, ch
 	}
 }
 
-bool TimerRunning(int client)
+bool TimerStarted(int client)
 {
-	return Shavit_GetTimerStatus(client) != Timer_Stopped;
+	return Shavit_GetTimerStatus(client) != Timer_Stopped && !Shavit_InsideZone(client, Zone_Start, -1);
 }
 
 
@@ -87,7 +87,7 @@ public void OnPlayerRunCmdPre(int client, int buttons, int impulse, const float 
 		return;
 	}
 
-	if (!TimerRunning(client))
+	if (!TimerStarted(client))
 	{
 		g_bTeleported[client] = false;
 		return;
@@ -181,7 +181,7 @@ public Action Shavit_OnDelete(int client, int index, bool cleared)
 
 public Action KeyText(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init)
 {
-	if (!TimerRunning(players[0]) || GetClientTeam(players[0]) == 0)
+	if (!TimerStarted(players[0]) || GetClientTeam(players[0]) == 0)
 	{
 		return Plugin_Continue;
 	}
@@ -209,7 +209,7 @@ void SegmentFrame(DataPack p)
 	p.ReadString(buf, 256);
 	delete p;
 
-	if (client == 0 || !TimerRunning(client))
+	if (client == 0 || !TimerStarted(client))
 	{
 		return;
 	}
