@@ -18,6 +18,7 @@ bool g_bTeleported[MAXPLAYERS+1];
 int g_nTeleportedTo[MAXPLAYERS+1];
 UserMsg g_iKeyHintText;
 Cookie g_hFreezeCookie;
+ConVar g_cvStyleHint;
 
 public Plugin myinfo =
 {
@@ -37,6 +38,9 @@ public void OnPluginStart()
 
 	g_hFreezeCookie = new Cookie("betterseg_freeze", "Freeze after checkpoint teleport", CookieAccess_Protected);
 	g_hFreezeCookie.SetPrefabMenu(CookieMenu_OnOff_Int, "Freeze after teleport", OnFreezeCookieMenu);
+
+	g_cvStyleHint = CreateConVar("betterseg_style_hint", "1", "Print the !seg_freeze hint in chat when a player changes style.", 0, true, 0.0, true, 1.0);
+	AutoExecConfig(true, "betterseg");
 }
 
 public void OnAllPluginsLoaded()
@@ -169,7 +173,10 @@ public Action Cmd_Freeze(int client, int args)
 
 public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int track, bool manual)
 {
-	Shavit_PrintToChat(client, "Use !seg_freeze to enable/disable freezing after teleports!");
+	if (g_cvStyleHint.BoolValue)
+	{
+		Shavit_PrintToChat(client, "Use !seg_freeze to enable/disable freezing after teleports!");
+	}
 
 	Unfreeze(client);
 }
