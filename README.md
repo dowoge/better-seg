@@ -4,7 +4,7 @@ A small [bhoptimer](https://github.com/shavitush/bhoptimer) add-on for segmented
 
 ## Features
 
-- Freezes the player in place after `Shavit_TeleportToCheckpoint` until they press a movement key (`vel[0]`/`vel[1]` become non-zero). While frozen, the player is re-teleported to the checkpoint every tick.
+- Freezes the player in place after `Shavit_TeleportToCheckpoint` until they press a movement key (`vel[0]`/`vel[1]` become non-zero). While frozen, the player is re-teleported to the checkpoint every tick with zero velocity and `MOVETYPE_NONE`, so client prediction matches the server and there are no prediction errors until the player moves.
 - Blocks checkpoint saves while the player is still frozen after a teleport (`Shavit_OnSavePre`).
 - Appends `Freeze after teleport: ON/OFF` to the checkpoint `KeyHintText` HUD panel.
 - Notifies the player about `!seg_freeze` when they switch to a segmented style.

@@ -100,6 +100,11 @@ public void OnPlayerRunCmdPre(int client, int buttons, int impulse, const float 
 			{
 				g_bTeleported[client] = false;
 			}
+			else
+			{
+				TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+				SetEntityMoveType(client, MOVETYPE_NONE);
+			}
 		}
 		else
 		{
