@@ -23,8 +23,8 @@ public Plugin myinfo =
 {
 	name = "Better seg",
 	author = "wool (?), source reconstructed by tommy",
-	description = "Freezes players after checkpoint teleports on segmented styles",
-	version = "1.0.0",
+	description = "Freezes players after checkpoint teleports while the timer is running",
+	version = "1.1.0",
 	url = "https://github.com/dowoge/better-seg"
 };
 
@@ -35,7 +35,7 @@ public void OnPluginStart()
 	g_iKeyHintText = GetUserMessageId("KeyHintText");
 	HookUserMessage(g_iKeyHintText, KeyText, true);
 
-	g_hFreezeCookie = new Cookie("betterseg_freeze", "Freeze after teleport on segmented styles", CookieAccess_Protected);
+	g_hFreezeCookie = new Cookie("betterseg_freeze", "Freeze after checkpoint teleport", CookieAccess_Protected);
 	g_hFreezeCookie.SetPrefabMenu(CookieMenu_OnOff_Int, "Freeze after teleport", OnFreezeCookieMenu);
 }
 
@@ -70,9 +70,11 @@ public void OnFreezeCookieMenu(int client, CookieMenuAction action, any info, ch
 	}
 }
 
-bool CanSegment(int client)
+bool TimerStarted(int client)
 {
-	return Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(client), "segments");
+	// shavit restarts the timer every tick inside the start zone, so a timer
+	// that has accumulated more than a couple of ticks has actually left it.
+	return Shavit_GetTimerStatus(client) != Timer_Stopped && Shavit_GetClientTime(client) > 5.0 * GetTickInterval();
 }
 
 
@@ -83,7 +85,7 @@ public void OnPlayerRunCmdPre(int client, int buttons, int impulse, const float 
 		return;
 	}
 
-	if (!CanSegment(client))
+	if (!TimerStarted(client))
 	{
 		g_bTeleported[client] = false;
 		return;
@@ -160,10 +162,7 @@ public Action Cmd_Freeze(int client, int args)
 
 public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int track, bool manual)
 {
-	if (Shavit_GetStyleSettingBool(newstyle, "segments"))
-	{
-		Shavit_PrintToChat(client, "Use !seg_freeze to enable/disable freezing after teleports!");
-	}
+	Shavit_PrintToChat(client, "Use !seg_freeze to enable/disable freezing after teleports!");
 
 	g_bTeleported[client] = false;
 }
@@ -177,7 +176,7 @@ public Action Shavit_OnDelete(int client, int index, bool cleared)
 
 public Action KeyText(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init)
 {
-	if (!CanSegment(players[0]) || GetClientTeam(players[0]) == 0)
+	if (!TimerStarted(players[0]) || GetClientTeam(players[0]) == 0)
 	{
 		return Plugin_Continue;
 	}
@@ -205,7 +204,7 @@ void SegmentFrame(DataPack p)
 	p.ReadString(buf, 256);
 	delete p;
 
-	if (client == 0 || !CanSegment(client))
+	if (client == 0 || !TimerStarted(client))
 	{
 		return;
 	}
