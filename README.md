@@ -1,13 +1,14 @@
 # better-seg
 
-A small [bhoptimer](https://github.com/shavitush/bhoptimer) add-on for segmented styles. When a player on a style with the `segments` setting teleports to a checkpoint, the plugin keeps them frozen at the checkpoint until they start moving, and it appends the current freeze setting to the checkpoint `KeyHintText` panel.
+A small [bhoptimer](https://github.com/shavitush/bhoptimer) add-on. When a player with a running timer teleports to a checkpoint, the plugin keeps them frozen at the checkpoint until they start moving, and it appends the current freeze setting to the checkpoint `KeyHintText` panel.
 
 ## Features
 
+- Works on every style, but only while the timer is running (`Shavit_GetTimerStatus` is not `Timer_Stopped`).
 - Freezes the player in place after `Shavit_TeleportToCheckpoint` until they press a movement key (`vel[0]`/`vel[1]` become non-zero). While frozen, the player is re-teleported to the checkpoint every tick with zero velocity and `MOVETYPE_NONE`, so client prediction matches the server and there are no prediction errors until the player moves.
 - Blocks checkpoint saves while the player is still frozen after a teleport (`Shavit_OnSavePre`).
 - Appends `Freeze after teleport: ON/OFF` to the checkpoint `KeyHintText` HUD panel.
-- Notifies the player about `!seg_freeze` when they switch to a segmented style.
+- Notifies the player about `!seg_freeze` when they switch style (`betterseg_style_hint`, default `1`).
 - Remembers each player's freeze setting with a clientprefs cookie (`betterseg_freeze`); also toggleable from the `!settings` menu.
 
 ## Commands
@@ -15,6 +16,12 @@ A small [bhoptimer](https://github.com/shavitush/bhoptimer) add-on for segmented
 | Command | Description |
 | --- | --- |
 | `sm_seg_freeze` | Toggle freezing after teleport for the calling player (default: on, saved per player). |
+
+## ConVars
+
+| ConVar | Default | Description |
+| --- | --- | --- |
+| `betterseg_style_hint` | `1` | Print the `!seg_freeze` hint in chat on style change. Config written to `cfg/sourcemod/betterseg.cfg`. |
 
 ## Requirements
 
