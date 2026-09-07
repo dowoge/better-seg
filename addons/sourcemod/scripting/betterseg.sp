@@ -77,6 +77,21 @@ bool TimerStarted(int client)
 	return Shavit_GetTimerStatus(client) != Timer_Stopped && Shavit_GetClientTime(client) > 5.0 * GetTickInterval();
 }
 
+void Unfreeze(int client)
+{
+	if (!g_bTeleported[client])
+	{
+		return;
+	}
+
+	g_bTeleported[client] = false;
+
+	if (GetEntityMoveType(client) == MOVETYPE_NONE)
+	{
+		SetEntityMoveType(client, MOVETYPE_WALK);
+	}
+}
+
 
 public void OnPlayerRunCmdPre(int client, int buttons, int impulse, const float vel[3], const float angles[3], int weapon, int subtype, int cmdnum, int tickcount, int seed, const int mouse[2])
 {
@@ -85,36 +100,28 @@ public void OnPlayerRunCmdPre(int client, int buttons, int impulse, const float 
 		return;
 	}
 
-	if (!TimerStarted(client))
+	if (!g_bTeleported[client])
 	{
-		g_bTeleported[client] = false;
 		return;
 	}
 
-	if (g_bTeleported[client])
+	if (!TimerStarted(client) || !g_bFreeze[client])
 	{
-
-		if (g_bFreeze[client])
-		{
-			Shavit_TeleportToCheckpoint(client, g_nTeleportedTo[client], true);
-
-			if (vel[0] || vel[1])
-			{
-				g_bTeleported[client] = false;
-			}
-			else
-			{
-				TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
-				SetEntityMoveType(client, MOVETYPE_NONE);
-			}
-		}
-		else
-		{
-			g_bTeleported[client] = false;
-		}
+		Unfreeze(client);
+		return;
 	}
 
-	return;
+	Shavit_TeleportToCheckpoint(client, g_nTeleportedTo[client], true);
+
+	if (vel[0] || vel[1])
+	{
+		Unfreeze(client);
+	}
+	else
+	{
+		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+		SetEntityMoveType(client, MOVETYPE_NONE);
+	}
 }
 
 public Action Shavit_OnSavePre(int client, int index, bool overflow, bool duplicate)
@@ -164,12 +171,12 @@ public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int tr
 {
 	Shavit_PrintToChat(client, "Use !seg_freeze to enable/disable freezing after teleports!");
 
-	g_bTeleported[client] = false;
+	Unfreeze(client);
 }
 
 public Action Shavit_OnDelete(int client, int index, bool cleared)
 {
-	g_bTeleported[client] = false;
+	Unfreeze(client);
 
 	return Plugin_Continue;
 }
