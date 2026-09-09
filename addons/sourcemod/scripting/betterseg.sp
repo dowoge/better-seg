@@ -19,6 +19,12 @@ int g_nTeleportedTo[MAXPLAYERS+1];
 UserMsg g_iKeyHintText;
 Cookie g_hFreezeCookie;
 ConVar g_cvStyleHint;
+ConVar g_cvReleaseRamp;
+float g_fRampTau[MAXPLAYERS+1];
+float g_fRamp[MAXPLAYERS+1];
+float g_fRampBase[MAXPLAYERS+1];
+float g_fRampSimTicks[MAXPLAYERS+1];
+int g_iRampFrames[MAXPLAYERS+1];
 
 public Plugin myinfo =
 {
@@ -40,6 +46,7 @@ public void OnPluginStart()
 	g_hFreezeCookie.SetPrefabMenu(CookieMenu_OnOff_Int, "Freeze after teleport", OnFreezeCookieMenu);
 
 	g_cvStyleHint = CreateConVar("betterseg_style_hint", "1", "Print the !seg_freeze hint in chat when a player changes style.", 0, true, 0.0, true, 1.0);
+	g_cvReleaseRamp = CreateConVar("betterseg_release_ramp", "1.0", "After unfreezing, ramp the player's movement speed up over this many round trips so the client never has to catch up in one jump. 0 disables.", 0, true, 0.0);
 	AutoExecConfig(true, "betterseg");
 }
 
@@ -51,6 +58,7 @@ public void OnClientConnected(int client)
 {
 	g_bTeleported[client] = false;
 	g_bFreeze[client] = true;
+	g_fRampTau[client] = 0.0;
 }
 
 public void OnClientCookiesCached(int client)
@@ -96,12 +104,129 @@ void Unfreeze(int client)
 	}
 }
 
+// Client re-simulates unacked commands once it learns of the unfreeze, so a full-speed release
+// jumps by rtt*speed. Ramping predicted movement speed lets the growing prediction lead fill that in.
+void StartRamp(int client)
+{
+	float latency = GetClientLatency(client, NetFlow_Both);
+	float tau = g_cvReleaseRamp.FloatValue * (RoundToCeil(latency / GetTickInterval()) + 1);
+
+	if (tau <= 1.0)
+	{
+		return;
+	}
+
+	g_fRampTau[client] = tau;
+	g_fRamp[client] = 0.0;
+	g_fRampBase[client] = GetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue");
+	g_fRampSimTicks[client] = 0.0;
+	g_iRampFrames[client] = -1;
+
+	AdvanceRamp(client);
+}
+
+void AdvanceRamp(int client)
+{
+	TrimSkippedReplayFrame(client);
+
+	float r = g_fRamp[client] + (1.0 - g_fRamp[client]) / g_fRampTau[client];
+
+	if (r >= 0.98)
+	{
+		StopRamp(client);
+		return;
+	}
+
+	g_fRamp[client] = r;
+	SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", g_fRampBase[client] * r);
+
+	int wholeTicks = RoundToFloor(g_fRampSimTicks[client]);
+	g_fRampSimTicks[client] += r;
+
+	bool skipped = RoundToFloor(g_fRampSimTicks[client]) == wholeTicks;
+	g_iRampFrames[client] = (skipped && LibraryExists("shavit-replay-recorder")) ? Shavit_GetClientFrameCount(client) : -1;
+}
+
+void StopRamp(int client)
+{
+	if (g_fRampTau[client] <= 0.0)
+	{
+		return;
+	}
+
+	g_fRampTau[client] = 0.0;
+	g_iRampFrames[client] = -1;
+	Shavit_UpdateLaggedMovement(client, true);
+}
+
+void TrimSkippedReplayFrame(int client)
+{
+	if (g_iRampFrames[client] < 0)
+	{
+		return;
+	}
+
+	int expected = g_iRampFrames[client] + 1;
+	g_iRampFrames[client] = -1;
+
+	if (Shavit_GetClientFrameCount(client) != expected)
+	{
+		return;
+	}
+
+	ArrayList frames = Shavit_GetReplayData(client, true);
+
+	if (frames == null)
+	{
+		return;
+	}
+
+	frames.Erase(frames.Length - 1);
+	Shavit_SetReplayData(client, frames, true);
+	delete frames;
+}
+
+public void Shavit_OnTimeIncrementPost(int client, float time)
+{
+	if (g_fRampTau[client] <= 0.0)
+	{
+		return;
+	}
+
+	timer_snapshot_t snapshot;
+	Shavit_SaveSnapshot(client, snapshot, sizeof(snapshot));
+
+	snapshot.iFractionalTicks -= RoundFloat((1.0 - g_fRamp[client]) * time / GetTickInterval() * 10000.0);
+
+	while (snapshot.iFractionalTicks < 0)
+	{
+		snapshot.iFractionalTicks += 10000;
+		snapshot.iFullTicks--;
+	}
+
+	Shavit_LoadSnapshot(client, snapshot, sizeof(snapshot), true);
+}
+
 
 public void OnPlayerRunCmdPre(int client, int buttons, int impulse, const float vel[3], const float angles[3], int weapon, int subtype, int cmdnum, int tickcount, int seed, const int mouse[2])
 {
 	if (IsFakeClient(client) || GetClientTeam(client) == 1)
 	{
 		return;
+	}
+
+	if (g_fRampTau[client] > 0.0)
+	{
+		MoveType mt = GetEntityMoveType(client);
+
+		if (Shavit_GetTimerStatus(client) != Timer_Running || (mt != MOVETYPE_WALK && mt != MOVETYPE_LADDER))
+		{
+			StopRamp(client);
+		}
+		else
+		{
+			AdvanceRamp(client);
+		}
 	}
 
 	if (!g_bTeleported[client])
@@ -120,6 +245,7 @@ public void OnPlayerRunCmdPre(int client, int buttons, int impulse, const float 
 	if (vel[0] || vel[1])
 	{
 		Unfreeze(client);
+		StartRamp(client);
 	}
 	else
 	{
@@ -144,6 +270,8 @@ public Action Shavit_OnTeleport(int client, int index, int target)
 	{
 		return Plugin_Continue;
 	}
+
+	StopRamp(client);
 
 	if (!g_bFreeze[client])
 	{
@@ -179,6 +307,17 @@ public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int tr
 	}
 
 	Unfreeze(client);
+	StopRamp(client);
+}
+
+public void Shavit_OnStop(int client, int track)
+{
+	StopRamp(client);
+}
+
+public void Shavit_OnRestart(int client, int track)
+{
+	StopRamp(client);
 }
 
 public Action Shavit_OnDelete(int client, int index, bool cleared)
